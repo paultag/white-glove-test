@@ -3,40 +3,38 @@ package main
 import (
 	"fmt"
 	"net/mail"
+	"strings"
 
+	"pault.ag/go/archive"
+	"pault.ag/go/debian/dependency"
 	"pault.ag/go/white-glove-test/repo"
-	"pault.ag/go/white-glove-test/untangle"
 )
 
+type Node struct {
+	Package    archive.Package
+	BuiltUsing dependency.Possibility
+	Distance   int
+	Arch       string
+}
+
 func main() {
-	// r := repo.Repo{Base: "http://archive.paultag.house/debian/"}
 	r := repo.Repo{Base: "http://proxy:3142/debian/"}
 
-	sourcesR, closer, err := r.Sources("unstable", "main")
-	if err != nil {
-		panic(err)
-	}
-	defer closer()
-
-	sources, err := untangle.LoadSourceMap(*sourcesR)
+	sources, err := r.LoadSourceMap("unstable", "main")
 	if err != nil {
 		panic(err)
 	}
 
-	packages, closer, err := r.Packages("unstable", "main", "binary-amd64")
-	if err != nil {
-		panic(err)
-	}
-	defer closer()
-
-	binaries, err := untangle.LoadBinaryMap(*packages)
+	bmap, err := r.LoadArchBinaryMap("unstable", "main", "binary-amd64", "binary-all", "binary-armhf", "binary-i386")
 	if err != nil {
 		panic(err)
 	}
 
-	for _, binary := range *binaries {
-		latest := binary[0]
-		for _, possi := range latest.BuiltUsing.GetAllPossibilities() {
+	outdated := map[string][]Node{}
+
+	for arch, binaries := range *bmap {
+		for _, binary := range binaries {
+			latest := binary[0]
 			who, err := mail.ParseAddress(latest.Maintainer)
 			if err != nil {
 				// Some people use Foo (Bar) <baz>, and the parser chokes on
@@ -48,16 +46,43 @@ func main() {
 				continue
 			}
 
-			distance, err := sources.Matches(possi)
-			if err != nil {
-				panic(err)
-			}
-
-			if distance == 0 {
+			if len(latest.BuiltUsing.Relations) == 0 {
 				continue
 			}
 
-			fmt.Printf("%d %s -> %s\n", distance, latest.Package, possi.Name)
+			for _, possi := range latest.BuiltUsing.GetAllPossibilities() {
+				distance, err := sources.Matches(possi)
+				if err != nil {
+					panic(err)
+				}
+
+				if distance == 0 {
+					continue
+				}
+
+				outdated[latest.Package] = append(outdated[latest.Package], Node{
+					Package:    latest,
+					BuiltUsing: possi,
+					Distance:   distance,
+					Arch:       arch,
+				})
+			}
 		}
+	}
+
+	for pkg, results := range outdated {
+		arches := map[string][]string{}
+
+		fmt.Printf("# %s\n", pkg)
+		for _, result := range results {
+			arches[result.Arch] = append(arches[result.Arch], result.BuiltUsing.Name)
+		}
+
+		a := []string{}
+		for arch, why := range arches {
+			a = append(a, arch)
+			fmt.Printf("# out of date on %s: %s\n", arch, strings.Join(why, ", "))
+		}
+		fmt.Printf("nmu %s . %s . unstable . -m \"Out of date Built-Using\"\n\n", pkg, strings.Join(a, " "))
 	}
 }

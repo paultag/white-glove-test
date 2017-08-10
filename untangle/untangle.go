@@ -26,6 +26,8 @@ func SortSources(sources []archive.Source) []archive.Source {
 
 type BinaryMap map[string][]archive.Package
 
+type ArchBinaryMap map[string]BinaryMap
+
 func LoadBinaryMap(binaries archive.Packages) (*BinaryMap, error) {
 	ret := BinaryMap{}
 
