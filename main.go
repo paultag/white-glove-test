@@ -18,14 +18,23 @@ type Node struct {
 }
 
 func main() {
-	r := repo.Repo{Base: "http://archive.paultag.house/debian/"}
+	r := repo.Repo{Base: "http://ftp.us.debian.org/debian/"}
 
 	sources, err := r.LoadSourceMap("unstable", "main")
 	if err != nil {
 		panic(err)
 	}
 
-	bmap, err := r.LoadArchBinaryMap("unstable", "main", "binary-amd64", "binary-all", "binary-armhf", "binary-i386")
+	bmap, err := r.LoadArchBinaryMap("unstable", "main",
+		"binary-all",
+		"binary-amd64", "binary-i386",
+		"binary-arm64", "binary-armel", "binary-armhf",
+		"binary-hurd-i386",
+		"binary-kfreebsd-amd64", "binary-kfreebsd-amd64",
+		"binary-mips", "binary-mips64el", "binary-mipsel",
+		"binary-powerpc", "binary-ppc64el",
+		"binary-s390x",
+	)
 	if err != nil {
 		panic(err)
 	}
