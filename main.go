@@ -18,7 +18,7 @@ type Node struct {
 }
 
 func main() {
-	r := repo.Repo{Base: "http://proxy:3142/debian/"}
+	r := repo.Repo{Base: "http://archive.paultag.house/debian/"}
 
 	sources, err := r.LoadSourceMap("unstable", "main")
 	if err != nil {
@@ -80,7 +80,8 @@ func main() {
 
 		a := []string{}
 		for arch, why := range arches {
-			a = append(a, arch)
+			chunks := strings.Split(arch, "-")
+			a = append(a, chunks[1])
 			fmt.Printf("# out of date on %s: %s\n", arch, strings.Join(why, ", "))
 		}
 		fmt.Printf("nmu %s . %s . unstable . -m \"Out of date Built-Using\"\n\n", pkg, strings.Join(a, " "))
