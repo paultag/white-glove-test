@@ -18,7 +18,7 @@ type Node struct {
 }
 
 func main() {
-	r := repo.Repo{Base: "http://ftp.us.debian.org/debian/"}
+	r := repo.Repo{Base: "http://mirror.cc.columbia.edu/debian/"}
 
 	sources, err := r.LoadSourceMap("unstable", "main")
 	if err != nil {
