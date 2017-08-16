@@ -9,6 +9,7 @@ import (
 
 	"pault.ag/go/archive"
 	"pault.ag/go/debian/dependency"
+	"pault.ag/go/white-glove-test/repo"
 )
 
 // Built-Using Relation between two Sources. This is provided for a source, for
@@ -98,19 +99,22 @@ func LoadPackagesFile(path string) (*archive.PackageMap, error) {
 
 func main() {
 	amap := ArchMap{}
-	arches := []string{"amd64", "armhf"}
+	r := repo.Repo{Base: "http://mirror.cc.columbia.edu/debian/"}
+	arches := []string{
+		"amd64", "arm64", "armel", "armhf", "i386", "ppc64el",
+	}
 
-	smap, err := LoadSourcesFile("Sources")
+	smap, err := r.LoadSourceMap("unstable", "main")
 	if err != nil {
 		panic(err)
 	}
 
 	for _, arch := range arches {
-		bmap, err := LoadPackagesFile(fmt.Sprintf("Packages-%s", arch))
+		pmap, err := r.LoadPackageMap("unstable", "main", fmt.Sprintf("binary-%s", arch))
 		if err != nil {
 			panic(err)
 		}
-		amap[arch] = *bmap
+		amap[arch] = *pmap
 	}
 
 	cmap := CandidatesMap{}
@@ -135,17 +139,14 @@ func main() {
 		}
 
 		carches := candidates.Arches()
-		if len(carches) == 1 && carches[0].Is(&dependency.All) {
-			continue
-		}
-
-		// sources := candidates.Sources()
+		sources := candidates.Sources()
 
 		if len(arches) == len(carches) {
 			carches = []dependency.Arch{dependency.Any}
 		}
 
-		fmt.Printf("nmu %s . %s . -m '%s'\n", pkg.Package, join(carches, ", "), "out of date")
+		fmt.Printf("# %s\n", strings.Join(sources, ", "))
+		fmt.Printf("nmu %s . %s . -m '%s'\n\n", pkg, join(carches, " "), "out of date")
 	}
 }
 
@@ -164,9 +165,17 @@ func join(s []dependency.Arch, sep string) string {
 func ProcessBinary(smap archive.SourceMap, packages []archive.Package) (string, Candidates) {
 	ret := Candidates{}
 	latest := packages[0]
-	sname := latest.Source
+	sname := latest.Source.Name
 	if sname == "" {
 		sname = latest.Package
+	}
+
+	if latest.Architecture.Is(&dependency.All) {
+		return "", nil
+	}
+
+	if strings.Contains(sname, " ") {
+		panic(sname)
 	}
 
 	for _, possi := range latest.BuiltUsing.GetAllPossibilities() {

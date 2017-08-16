@@ -25,20 +25,6 @@ func main() {
 		panic(err)
 	}
 
-	bmap, err := r.LoadArchBinaryMap("unstable", "main",
-		"binary-all",
-		"binary-amd64", "binary-i386",
-		"binary-arm64", "binary-armel", "binary-armhf",
-		"binary-hurd-i386",
-		"binary-kfreebsd-amd64", "binary-kfreebsd-amd64",
-		"binary-mips", "binary-mips64el", "binary-mipsel",
-		"binary-powerpc", "binary-ppc64el",
-		"binary-s390x",
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	outdated := map[string][]Node{}
 
 	for arch, binaries := range *bmap {

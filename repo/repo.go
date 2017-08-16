@@ -7,7 +7,6 @@ import (
 	"path"
 
 	"pault.ag/go/archive"
-	"pault.ag/go/white-glove-test/untangle"
 	"xi2.org/x/xz"
 )
 
@@ -52,32 +51,20 @@ func (r Repo) Sources(suite, component string) (*archive.Sources, func() error, 
 	return packages, closer, err
 }
 
-func (r Repo) LoadSourceMap(suite, component string) (*untangle.SourceMap, error) {
+func (r Repo) LoadSourceMap(suite, component string) (*archive.SourceMap, error) {
 	sourcesR, closer, err := r.Sources(suite, component)
 	if err != nil {
 		return nil, err
 	}
 	defer closer()
-	return untangle.LoadSourceMap(*sourcesR)
+	return archive.LoadSourceMap(*sourcesR)
 }
 
-func (r Repo) LoadBinaryMap(suite, component, arch string) (*untangle.BinaryMap, error) {
+func (r Repo) LoadPackageMap(suite, component, arch string) (*archive.PackageMap, error) {
 	binaries, closer, err := r.Packages(suite, component, arch)
 	if err != nil {
 		return nil, err
 	}
 	defer closer()
-	return untangle.LoadBinaryMap(*binaries)
-}
-
-func (r Repo) LoadArchBinaryMap(suite, component string, arches ...string) (*untangle.ArchBinaryMap, error) {
-	ret := untangle.ArchBinaryMap{}
-	for _, arch := range arches {
-		binaries, err := r.LoadBinaryMap(suite, component, arch)
-		if err != nil {
-			return nil, err
-		}
-		ret[arch] = *binaries
-	}
-	return &ret, nil
+	return archive.LoadPackageMap(*binaries)
 }
